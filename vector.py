@@ -1,38 +1,42 @@
 from math import sqrt
 
 
-class Vector2D:
+class Vector2:
     def __init__(self, x, y):
         self.x = x
         self.y = y
 
-    def add(self, vector2):
-        self.x = self.x + vector2.x
-        self.y = self.y + vector2.y
+    def __add__(self, vector2):
+        return Vector2(self.x + vector2.x, self.y + vector2.y)
 
-    def substract(self, vector2):
-        self.x = self.x - vector2.x
-        self.y = self.y - vector2.y
+    def __sub__(self, vector2):
+        return Vector2(self.x - vector2.x, self.y - vector2.y)
 
     def delta_velocity(self, vector2, dt):
         self.x += vector2.x * dt
         self.y += vector2.y * dt
 
-    def multiply(self, number):
-        self.x = self.x * number
-        self.y = self.y * number
+    def __mul__(self, other):
+        if type(other) == type(self):
+            return Vector2(self.x * other.x, self.y*other.y)
+        elif type(other) in (int, float):
+            return Vector2(self.x * other, self.y * other)
 
-    def divide(self, number):
-        self.x = self.x / number
-        self.y = self.y / number
+    def __truediv__(self, other):
+        if type(other) == type(self):
+            return Vector2(self.x / other.x, self.y / other.y)
+        elif type(other) in (int, float):
+            return Vector2(self.x / other, self.y / other)
 
+    def __floordiv__(self, other):
+        if type(other) == type(self):
+            return Vector2(self.x // other.x, self.y // other.y)
+        elif type(other) in (int, float):
+            return Vector2(self.x // other, self.y // other)
+    
     def replace(self, vector2):
         self.x = vector2.x
         self.y = vector2.y
-
-    def reuseVector(self, x, y):
-        self.x = x
-        self.y = y
 
     def magnitude(self):
         return self.x*self.x + self.y*self.y
@@ -43,19 +47,18 @@ class Vector2D:
     def normalize(self):
         m = self.sqrMagnitude()
         if m != 0:
-            self.divide(m)
+            return self / m
 
     def reverse(self):
-        self.x = self.x * -1
-        self.y = self.y * -1
+        return Vector2(self.x * -1, self.y * -1)
 
     def limit(self, number):
         if self.y <= number:
             self.y = number
 
     def distancefromvector(self, vector2):
-        self.substract(vector2)
-        self.normalize()
+        self - vector2
+        return self.normalize()
 
     def returned(self, vector2):
         return vector2.x, vector2.y
@@ -74,3 +77,11 @@ class Vector2D:
 
     def right(self, velocity):
         self.x += velocity
+
+    def __int__(self):
+        # self.x = int(self.x)
+        # self.y = int(self.y)
+        return Vector2(int(self.x), int(self.y))
+
+    def __repr__(self):
+        return str('%s %s'%(self.x, self.y))
