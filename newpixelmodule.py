@@ -18,3 +18,11 @@ def rect(position_vector2, second_vector2, col):
 def rectb(position_vector2, second_vector2, col):
     pyxel.rectb(position_vector2.x, position_vector2.y,
                 second_vector2.x, second_vector2.y, col)
+
+
+def circ(position_vector2, r, col):
+    pyxel.circ(position_vector2.x, position_vector2.y, r, col)
+
+
+def circb(position_vector2, r, col):
+    pyxel.circb(position_vector2.x, position_vector2.y, r, col)

@@ -3,85 +3,9 @@ import newpixelmodule as npx
 from constants import FPS, WIDTH, HEIGHT, WHITE, BLUE, RED, ORANGE, CYAN, PURPLE
 from vector import Vector2 as Vec2
 from time import time
-
-
-class Entity:
-    def __init__(self, position_x_y, lenght_x_y, color):
-        #
-        self.position = position_x_y
-        self.oldlenght = lenght_x_y
-
-        self.lenght = self.oldlenght + self.position
-
-        # All Entity corner, it's a vector2 position on screen
-        self.upperleftcorner = self.position
-        self.downleftcorner = self.position + Vec2(0, self.oldlenght.y)
-        self.upperrightcorner = self.position + Vec2(self.oldlenght.x, 0)
-        self.downrightcorner = self.position + \
-            Vec2(self.oldlenght.x, self.oldlenght.y)
-
-        # The 4 wall of the entity, it's two vector2
-        self.upwall = (self.upperleftcorner, self.upperrightcorner)
-        self.rightwall = (self.upperrightcorner, self.downrightcorner)
-        self.downwall = (self.downrightcorner, self.downleftcorner)
-        self.leftwall = (self.downleftcorner, self.upperleftcorner)
-        self.wall = [self.upwall, self.rightwall, self.downwall, self.leftwall]
-
-        self.color = color
-
-    def update(self):
-        self.lenght = self.oldlenght + self.position
-        self.upperleftcorner = self.position
-        self.upperrightcorner = self.position + Vec2(self.oldlenght.x, 0)
-        self.downleftcorner = self.position + Vec2(0, self.oldlenght.y)
-        self.downrightcorner = self.position + \
-            Vec2(self.oldlenght.x, self.oldlenght.y)
-
-        # All Entity corner, it's a vector2 position on screen
-        self.upperleftcorner = self.position
-        self.downleftcorner = self.position + Vec2(0, self.oldlenght.y)
-        self.upperrightcorner = self.position + Vec2(self.oldlenght.x, 0)
-        self.downrightcorner = self.position + \
-            Vec2(self.oldlenght.x, self.oldlenght.y)
-        self.corners = [self.upperleftcorner, self.upperrightcorner,
-                        self.downleftcorner, self.downrightcorner]
-
-        # The 4 wall of the entity, it's two vector2
-        self.upwall = (self.upperleftcorner, self.upperrightcorner)
-        self.rightwall = (self.upperrightcorner, self.downrightcorner)
-        self.downwall = (self.downrightcorner, self.downleftcorner)
-        self.leftwall = (self.downleftcorner, self.upperleftcorner)
-        self.walls = [self.upwall, self.rightwall,
-                      self.downwall, self.leftwall]
-
-    def debug(self):
-        for i in self.walls:
-            npx.line(i[0], i[1], RED)
-
-        for i in self.corners:
-            npx.pix(i, PURPLE)
-
-    def draw(self):
-        npx.rect(self.position, self.lenght, self.color)
-
-
-class Player(Entity):
-    def __init__(self, position_x_y, lenght_x_y):
-        super().__init__(position_x_y, lenght_x_y, ORANGE)
-
-    def update(self, dt, velocity):
-        super().update()
-
-        dt_velocity = velocity * dt
-
-        if px.btn(px.KEY_W):
-            self.position.up(dt_velocity)
-        if px.btn(px.KEY_S):
-            self.position.down(dt_velocity)
-        if px.btn(px.KEY_A):
-            self.position.left(dt_velocity)
-        if px.btn(px.KEY_D):
-            self.position.right(dt_velocity)
+import math
+import os
+from gameobjects import Entity, Player
 
 
 def raycast(ray_origin, ray_direction, corner1, corner2):
@@ -109,20 +33,49 @@ def raycast(ray_origin, ray_direction, corner1, corner2):
     t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denominateur
     u = -((x1-x2)*(y1-y3)-(y1-y2)*(x1 - x3)) / denominateur
 
-    print('den: %s t: %s u: %s' % (denominateur, t, u))
-
     if t > 0 and t < 1 and u > 0:
-        return True
+        return Vec2(x1 + t*(x2 - x1), y1 + t*(y2 - y1))
+
+
+class Ray:
+    """Ray Object that find the point of intersection of a ray and a given 2 points(A 2D wall have 2 point)"""
+
+    def __init__(self, ray_position, ray_direction, wallpoint_a, wallpoint_b):
+        self.ray_position = ray_position
+        self.ray_direction = ray_direction
+        self.wallpoint_a = wallpoint_a
+        self.wallpoint_b = wallpoint_b
+        self.ray_intersection = raycast(
+            self.ray_position, self.ray_direction, self.wallpoint_a, self.wallpoint_b)
+
+    def update(self):
+        self.ray_intersection = raycast(
+            self.ray_position, self.ray_direction, self.wallpoint_a, self.wallpoint_b)
+
+    def draw(self):
+        if self.ray_intersection != None:
+            npx.line(self.ray_intersection, self.ray_position, WHITE)
 
 
 class Main:
     def __init__(self):
         px.init(WIDTH, HEIGHT, fps=60)
+
+        px.load(os.getcwd() + "/assets/Raybot.pyxel")
+
         self.starting_time = time()
         self.previous_time = self.starting_time
 
-        self.player = Player(Vec2(WIDTH/2, HEIGHT/2), Vec2(10, 10))
-        self.bloc = Entity(Vec2(WIDTH/2, HEIGHT/4*3), Vec2(20, 5), CYAN)
+        self.player = Player(Vec2(WIDTH/8*7, HEIGHT/6), Vec2(10, 10))
+        self.bloc = Entity(Vec2(100, 38), Vec2(80, 68), CYAN)
+        self.rayslist = []
+        self.number_of_ray = 36
+        self.i = 0
+        for _ray in range(self.number_of_ray):  # Number of Rays
+            self.ray_dir = Vec2(math.cos(self.i), math.sin(self.i))
+            self.rayslist.append(Ray(self.player.downleftcorner, self.ray_dir,
+                                     self.bloc.upperleftcorner, self.bloc.downrightcorner))
+            self.i += math.radians(360/self.number_of_ray)
 
         px.run(self.update, self.draw)
 
@@ -133,14 +86,13 @@ class Main:
         dt = actual_time - self.previous_time
         self.previous_time = actual_time
 
-        self.player.update(dt, 30)
-        # print(self.player.upperleftcorner.x, self.player.downleftcorner.x,
-        #       self.player.upperrightcorner.x, self.player.upperrightcorner.y)
+        self.player.update(dt)
 
-        self.ray_dir = Vec2(1, 1)
-        if raycast(self.player.downleftcorner, self.ray_dir*10,
-                   self.bloc.upperleftcorner, self.bloc.upperrightcorner):
-            print('WAW')
+        self.mouse = Vec2(px.mouse_x, px.mouse_y)
+
+        for ray in self.rayslist:  # Number of Rays
+            ray.ray_position = self.player.downleftcorner
+            ray.update()
 
         if px.btnp(px.KEY_ESCAPE):
             px.quit()
@@ -149,11 +101,12 @@ class Main:
         px.cls(0)
         self.bloc.draw()
         self.player.draw()
-        # self.player.debug()
-        # self.bloc.debug()
+        self.player.debug()
+        for ray in self.rayslist:
+            ray.draw()
+        self.bloc.debug()
 
-        raycast(self.player.downleftcorner, self.ray_dir * 10,
-                self.bloc.upperleftcorner, self.bloc.upperrightcorner)
+        npx.line(self.bloc.upperleftcorner, self.bloc.downrightcorner, WHITE)
 
 
 Main()
