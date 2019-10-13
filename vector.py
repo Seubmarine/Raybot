@@ -41,11 +41,11 @@ class Vector2:
     def magnitude(self):
         return self.x*self.x + self.y*self.y
 
-    def sqrMagnitude(self):
+    def sqrtMagnitude(self):
         return sqrt(self.magnitude())
 
     def normalize(self):
-        m = self.sqrMagnitude()
+        m = self.sqrtMagnitude()
         if m != 0:
             return self / m
 
@@ -56,9 +56,13 @@ class Vector2:
         if self.y <= number:
             self.y = number
 
-    def distancefromvector(self, vector2):
-        self - vector2
+    def normalizefromvector(self, vector2):
+        self -= vector2
         return self.normalize()
+
+    def distancefromvector(self, vector2):
+        self -= vector2
+        return self.magnitude()
 
     def returned(self, vector2):
         return vector2.x, vector2.y

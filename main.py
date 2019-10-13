@@ -5,11 +5,12 @@ from vector import Vector2 as Vec2
 from time import time
 import math
 import os
+import random
 from gameobjects import Entity, Player
 
 
 def raycast(ray_origin, ray_direction, corner1, corner2):
-    ray_finalpoint = ray_origin + ray_direction
+    """Return a point(Vector2D) if there is one between a wall(two vector2D) and a given ray and his direction"""
     x1 = corner1.x
     y1 = corner1.y
     x2 = corner2.x
@@ -19,11 +20,6 @@ def raycast(ray_origin, ray_direction, corner1, corner2):
     y3 = ray_origin.y
     x4 = ray_origin.x + ray_direction.x
     y4 = ray_origin.y + ray_direction.y
-
-    npx.line(corner1, corner2, RED)
-
-    npx.line(ray_origin,
-             ray_finalpoint, RED)
 
     denominateur = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
 
@@ -48,9 +44,11 @@ class Ray:
         self.ray_intersection = raycast(
             self.ray_position, self.ray_direction, self.wallpoint_a, self.wallpoint_b)
 
-    def update(self):
-        self.ray_intersection = raycast(
-            self.ray_position, self.ray_direction, self.wallpoint_a, self.wallpoint_b)
+    def update(self, ray_position, wallpoint_a, wallpoint_b):
+        self.ray_position = ray_position
+        updated_intersection = raycast(
+            self.ray_position, self.ray_direction, wallpoint_a, wallpoint_b)
+        self.ray_intersection = updated_intersection
 
     def draw(self):
         if self.ray_intersection != None:
@@ -65,16 +63,18 @@ class Main:
 
         self.starting_time = time()
         self.previous_time = self.starting_time
-
+        self.screen = Entity(Vec2(0, 0), Vec2(WIDTH, HEIGHT), WHITE)
         self.player = Player(Vec2(WIDTH/8*7, HEIGHT/6), Vec2(10, 10))
         self.bloc = Entity(Vec2(100, 38), Vec2(80, 68), CYAN)
+        self.walls = [(Vec2(34, 88), Vec2(160, 170)),
+                      (self.bloc.upperleftcorner, self.bloc.downrightcorner)]
         self.rayslist = []
-        self.number_of_ray = 36
+        self.number_of_ray = 60
         self.i = 0
         for _ray in range(self.number_of_ray):  # Number of Rays
             self.ray_dir = Vec2(math.cos(self.i), math.sin(self.i))
-            self.rayslist.append(Ray(self.player.downleftcorner, self.ray_dir,
-                                     self.bloc.upperleftcorner, self.bloc.downrightcorner))
+            self.rayslist.append(
+                Ray(self.player.downleftcorner, self.ray_dir, Vec2(0, 0), Vec2(0, 0)))
             self.i += math.radians(360/self.number_of_ray)
 
         px.run(self.update, self.draw)
@@ -90,23 +90,51 @@ class Main:
 
         self.mouse = Vec2(px.mouse_x, px.mouse_y)
 
-        for ray in self.rayslist:  # Number of Rays
+        # CHECK ALL THE WALL AND WILL DETERMINE THE CLOSEST POINT BETWEEN MULTIPLE WALL FOR ONE RAY
+        # TODO implement this in the ray update somehow
+        for ray in self.rayslist:
+            closest = None
+            recorded_distance = float('inf')
             ray.ray_position = self.player.downleftcorner
-            ray.update()
+            for wall in self.walls:
+                pointnow = raycast(self.player.downleftcorner,
+                                   ray.ray_direction, wall[0], wall[1])
+                if pointnow:
+                    distance = ray.ray_position.distancefromvector(pointnow)
+                    if distance < recorded_distance:
+                        recorded_distance = distance
+                        closest = pointnow
+
+            if closest:
+                ray.ray_intersection = closest
+            else:
+                ray.ray_intersection = None
 
         if px.btnp(px.KEY_ESCAPE):
             px.quit()
+        
+        # ONLY FOR TEST
+        if px.btnp(px.KEY_P):
+            self.walls.clear()
+            self.walls.append((Vec2(0, 0), Vec2(0, HEIGHT)))
+            (Vec2(0, 0), Vec2(WIDTH, 0))
+
+            borders = [(Vec2(0, 0), Vec2(0, HEIGHT)), (Vec2(0, 0), Vec2(WIDTH, 0)), (Vec2(
+                WIDTH, HEIGHT), Vec2(WIDTH, 0)), (Vec2(WIDTH, HEIGHT), Vec2(0, HEIGHT))]
+            for border in borders:
+                self.walls.append(border)
+            for _randomwall in range(7):
+                self.walls.append((Vec2(random.randint(0, WIDTH), random.randint(
+                    0, HEIGHT)), Vec2(random.randint(0, WIDTH), random.randint(0, HEIGHT))))
 
     def draw(self):
         px.cls(0)
-        self.bloc.draw()
         self.player.draw()
         self.player.debug()
+        for wallpos_a, wallpos_b in self.walls:
+            npx.line(wallpos_a, wallpos_b, WHITE)
         for ray in self.rayslist:
             ray.draw()
-        self.bloc.debug()
-
-        npx.line(self.bloc.upperleftcorner, self.bloc.downrightcorner, WHITE)
 
 
 Main()
