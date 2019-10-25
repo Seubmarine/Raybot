@@ -44,11 +44,23 @@ class Ray:
         self.ray_intersection = raycast(
             self.ray_position, self.ray_direction, self.wallpoint_a, self.wallpoint_b)
 
-    def update(self, ray_position, wallpoint_a, wallpoint_b):
-        self.ray_position = ray_position
-        updated_intersection = raycast(
-            self.ray_position, self.ray_direction, wallpoint_a, wallpoint_b)
-        self.ray_intersection = updated_intersection
+    def update(self, walls, player):
+        closest = None
+        recorded_distance = float('inf')
+        self.ray_position = player.downleftcorner
+        for wall in walls:
+            pointnow = raycast(player.downleftcorner,
+                               self.ray_direction, wall[0], wall[1])
+            if pointnow:
+                distance = self.ray_position.distancefromvector(pointnow)
+                if distance < recorded_distance:
+                    recorded_distance = distance
+                    closest = pointnow
+
+            if closest:
+                self.ray_intersection = closest
+            else:
+                self.ray_intersection = None
 
     def draw(self):
         if self.ray_intersection != None:
@@ -69,14 +81,14 @@ class Main:
         self.walls = [(Vec2(34, 88), Vec2(160, 170)),
                       (self.bloc.upperleftcorner, self.bloc.downrightcorner)]
         self.rayslist = []
-        self.number_of_ray = 60
+        self.number_of_ray = 70
         self.i = 0
         for _ray in range(self.number_of_ray):  # Number of Rays
             self.ray_dir = Vec2(math.cos(self.i), math.sin(self.i))
             self.rayslist.append(
                 Ray(self.player.downleftcorner, self.ray_dir, Vec2(0, 0), Vec2(0, 0)))
             self.i += math.radians(360/self.number_of_ray)
-
+        self.on_off_switch = False
         px.run(self.update, self.draw)
 
     def update(self):
@@ -90,34 +102,17 @@ class Main:
 
         self.mouse = Vec2(px.mouse_x, px.mouse_y)
 
-        # CHECK ALL THE WALL AND WILL DETERMINE THE CLOSEST POINT BETWEEN MULTIPLE WALL FOR ONE RAY
-        # TODO implement this in the ray update somehow
         for ray in self.rayslist:
-            closest = None
-            recorded_distance = float('inf')
-            ray.ray_position = self.player.downleftcorner
-            for wall in self.walls:
-                pointnow = raycast(self.player.downleftcorner,
-                                   ray.ray_direction, wall[0], wall[1])
-                if pointnow:
-                    distance = ray.ray_position.distancefromvector(pointnow)
-                    if distance < recorded_distance:
-                        recorded_distance = distance
-                        closest = pointnow
-
-            if closest:
-                ray.ray_intersection = closest
-            else:
-                ray.ray_intersection = None
+            ray.update(self.walls, self.player)
 
         if px.btnp(px.KEY_ESCAPE):
             px.quit()
-        
+
         # ONLY FOR TEST
         if px.btnp(px.KEY_P):
             self.walls.clear()
-            self.walls.append((Vec2(0, 0), Vec2(0, HEIGHT)))
-            (Vec2(0, 0), Vec2(WIDTH, 0))
+            # self.walls.append((Vec2(0, 0), Vec2(0, HEIGHT)))
+            # (Vec2(0, 0), Vec2(WIDTH, 0))
 
             borders = [(Vec2(0, 0), Vec2(0, HEIGHT)), (Vec2(0, 0), Vec2(WIDTH, 0)), (Vec2(
                 WIDTH, HEIGHT), Vec2(WIDTH, 0)), (Vec2(WIDTH, HEIGHT), Vec2(0, HEIGHT))]
@@ -127,12 +122,21 @@ class Main:
                 self.walls.append((Vec2(random.randint(0, WIDTH), random.randint(
                     0, HEIGHT)), Vec2(random.randint(0, WIDTH), random.randint(0, HEIGHT))))
 
+        # press I to see the wall and O to unsee them
+        if px.btnp(px.KEY_I, 1, 1):
+            self.on_off_switch = True
+        if px.btnp(px.KEY_O, 1, 1):
+            self.on_off_switch = False
+
     def draw(self):
-        px.cls(0)
+        px.cls(1)
         self.player.draw()
         self.player.debug()
-        for wallpos_a, wallpos_b in self.walls:
-            npx.line(wallpos_a, wallpos_b, WHITE)
+
+        if self.on_off_switch:
+            for wallpos_a, wallpos_b in self.walls:
+                npx.line(wallpos_a, wallpos_b, WHITE)
+
         for ray in self.rayslist:
             ray.draw()
 
